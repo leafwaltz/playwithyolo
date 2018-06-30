@@ -30,3 +30,10 @@
 *.exe
 *.out
 *.app
+
+# Qt Files
+*.ui.qml
+*.user.pro
+*.pro
+*.qrc
+*.conf
