@@ -1,5 +1,8 @@
-#include <QGuiApplication>
+﻿#include <QGuiApplication>
 #include <QQmlApplicationEngine>
+#include <QQmlContext>
+
+#include "datatagcontroller.h"
 
 int main(int argc, char *argv[])
 {
@@ -8,6 +11,9 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
     engine.load(QUrl(QLatin1String("qrc:/main.qml")));
+
+    engine.rootContext()->setContextProperty("dataTagController", &DataTagController::globalInstance());
+
     if (engine.rootObjects().isEmpty())
         return -1;
 
