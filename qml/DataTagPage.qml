@@ -150,12 +150,12 @@ Rectangle
 
             color: "transparent"
             radius: 5
-            border.color: "steelblue"
+            border.color: enabled ? "steelblue" : "lightsteelblue"
 
             Text
             {
                 text: qsTr("删 除")
-                color: "#003366"
+                color: enabled ? "#003366" : "lightsteelblue"
                 font.family: qsTr("微软雅黑")
                 font.pixelSize: parent.width / 4
                 anchors.centerIn: parent
@@ -199,12 +199,12 @@ Rectangle
 
             color: "transparent"
             radius: 5
-            border.color: "steelblue"
+            border.color: enabled ? "steelblue" : "lightsteelblue"
 
             Text
             {
                 text: qsTr("添 加")
-                color: "#003366"
+                color: enabled ? "#003366" : "lightsteelblue"
                 font.family: qsTr("微软雅黑")
                 font.pixelSize: parent.width / 4
                 anchors.centerIn: parent
@@ -213,6 +213,18 @@ Rectangle
             MouseArea
             {
                 anchors.fill: parent
+
+                function getColor()
+                {
+                    var colorValue = "0,1,2,3,4,5,6,7,8,9,a,b,c,d,e,f"
+                    var colorArray = colorValue.split(",")
+                    var color = "#"
+                    for(var i = 0;i < 6;i++)
+                    {
+                        color += colorArray[Math.floor(Math.random()*16)];
+                    }
+                    return color;
+                }
 
                 onClicked:
                 {
@@ -227,7 +239,7 @@ Rectangle
                         flag = 0
 
                     if(flag)
-                        nameListModel.append({"name": addNameTextInput.text})
+                        nameListModel.append({"name": addNameTextInput.text, "classColor": getColor()})
                 }
 
                 onEntered:
@@ -326,6 +338,12 @@ Rectangle
 
                     currentIndex: -1
 
+                    onCurrentIndexChanged:
+                    {
+                        if(currentIndex!=-1)
+                            canvas.color = nameListModel.get(currentIndex).classColor
+                    }
+
                     model: ListModel
                     {
                         id: nameListModel
@@ -349,7 +367,7 @@ Rectangle
                             text: nameListDelegate.text
                             font.family: qsTr("微软雅黑")
                             font.pixelSize: namesScrollViewBorder.height / 20
-                            color: nameListDelegate.enabled ? (nameListDelegate.down ? "#steelblue" : "#003366") : "#003366"
+                            color: nameListDelegate.enabled ? (nameListDelegate.down ? "#steelblue" : classColor) : classColor
                             elide: Text.ElideRight
                             visible: nameListDelegate.text
                             horizontalAlignment: Text.AlignLeft
@@ -368,7 +386,7 @@ Rectangle
             }
         }
 
-        ProgressBar
+        /*ProgressBar
         {
             id: uploadProgressBar
             value: 0
@@ -416,7 +434,7 @@ Rectangle
             font.family: qsTr("微软雅黑")
 
             color: "#003366"
-        }
+        }*/
 
         Rectangle
         {
@@ -426,8 +444,10 @@ Rectangle
             width: height * 2
 
             anchors.horizontalCenter: parent.horizontalCenter
-            anchors.top: uploadLabel.bottom
-            anchors.topMargin: height / 2
+            //anchors.top: uploadLabel.bottom
+            //anchors.topMargin: height / 2
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: height
 
             color: "transparent"
             radius: 5
@@ -435,12 +455,15 @@ Rectangle
 
             Text
             {
-                text: qsTr("上传数据")
+                text: uploadButton.reuploadFlag ? qsTr("重新选择") : qsTr("上传数据")
                 color: "#003366"
                 font.family: qsTr("微软雅黑")
                 font.pixelSize: parent.width / 5
                 anchors.centerIn: parent
             }
+
+            property bool reuploadFlag: false
+            property bool uploaded: false
 
             MouseArea
             {
@@ -448,9 +471,51 @@ Rectangle
 
                 onClicked:
                 {
-                    for(var i = 0;i<nameListModel.count;i++)
+                    if(uploadButton.reuploadFlag)
                     {
-                        dataTagController.addName(nameListModel.get(i).name)
+                        uploadButton.reuploadFlag = false
+
+                        deleteNameButton.enabled = true
+                        addNameButton.enabled = true
+
+                        canvas.rectangleList = []
+                        canvas.requestClear = true
+                        canvas.requestPaint()
+                        image.source = ""
+                        image.imageIndex = 0
+                        image.canvasRectanglesTemp = []
+                        uploadButton.uploaded = false
+                        nameListView.currentIndex = -1
+                    }
+                    else
+                    {
+                        for(var i = 0;i<nameListModel.count;i++)
+                        {
+                            dataTagController.addName(nameListModel.get(i).name)
+                        }
+
+                        dataTagController.getImagePathes(selectPicturesTextInput.text)
+
+                        //console.log("file:///" + dataTagController.imageFolderPath() + "/" + dataTagController.imagePath(0))
+                        image.source = "file:///" + dataTagController.imageFolderPath() + "/" + dataTagController.imagePath(0)
+                        image.imageIndex = 0
+                        image.canvasRectanglesTemp = []
+
+                        for(var j = 0;j<dataTagController.imagesCount();j++)
+                        {
+                            image.canvasRectanglesTemp.push([])
+                        }
+
+                        uploadButton.uploaded = true
+                        uploadButton.reuploadFlag = true
+
+                        deleteNameButton.enabled = false
+                        addNameButton.enabled = false
+
+                        canvas.requestClear = true
+                        canvas.requestPaint()
+
+                        nextImageButton.imagesCount = dataTagController.imagesCount()
                     }
                 }
 
@@ -462,6 +527,224 @@ Rectangle
                 onExited:
                 {
                     parent.color = "transparent"
+                }
+            }
+        }
+    }
+
+    Rectangle
+    {
+        id: tagWindow
+
+        anchors.left: baseInfomation.right
+        anchors.top: baseInfomation.top
+        anchors.bottom: baseInfomation.bottom
+        anchors.right: parent.right
+        anchors.leftMargin: parent.width / 40
+        anchors.rightMargin: anchors.leftMargin
+
+        border.color: "lightsteelblue"
+        border.width: 1
+        color: "transparent"
+        radius: 10
+
+        Rectangle
+        {
+            id: imageWindow
+
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            anchors.topMargin: parent.height / 20
+            anchors.leftMargin: parent.width / 10
+            anchors.rightMargin: anchors.leftMargin
+            anchors.bottomMargin: parent.height / 5
+
+            border.color: "steelblue"
+            border.width: 1
+            color: "transparent"
+            radius: 10
+
+            Image
+            {
+                id: image
+
+                anchors.fill: parent
+                anchors.margins: parent.width / 30
+
+                asynchronous: true
+
+                property int imageIndex: 0
+                property var canvasRectanglesTemp
+
+                onProgressChanged:
+                {
+                    if(progress==1.0)
+                    {
+                        canvas.requestPaint()
+                    }
+                }
+
+                Canvas
+                {
+                    id: canvas
+                    anchors.fill: parent
+
+                    property real startX
+                    property real startY
+                    property string color
+                    property bool requestClear: false
+                    property bool isTagging: false
+                    property var rectangleList: []
+
+                    onPaint:
+                    {
+                        var ctx = getContext('2d')
+
+                        if(nameListView.currentIndex != -1 && uploadButton.uploaded && !canvas.requestClear)
+                        {
+                            ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+                            for(var i = 0;i < canvas.rectangleList.length;i++)
+                            {
+                                var rect = canvas.rectangleList[i]
+                                var rectWidth = rect.width * canvas.width
+                                var rectHeight = rect.height * canvas.height
+                                var rectX = rect.x * canvas.width - rectWidth / 2
+                                var rectY = rect.y * canvas.height - rectHeight / 2
+                                ctx.strokeStyle = rect.color
+                                ctx.fillStyle = rect.color
+                                ctx.lineWidth = 5.0
+                                ctx.strokeRect(rectX, rectY, rectWidth, rectHeight)
+                                ctx.lineWidth = 1.0
+                                ctx.font = "24px sans-serif"
+                                ctx.fillText(rect.index + " - " + rect.class, rectX , rectY - 20)
+                            }
+
+                            if(canvas.isTagging && area.mouseX - startX != 0 && area.mouseY - startY != 0)
+                            {
+                                ctx.strokeStyle = canvas.color
+                                ctx.fillStyle = canvas.color
+                                var rect_ = Qt.rect(startX, startY, area.mouseX - startX, area.mouseY - startY)
+                                ctx.lineWidth = 5.0
+                                ctx.strokeRect(rect_.x, rect_.y, rect_.width, rect_.height)
+                                ctx.lineWidth = 1.0
+                                ctx.font = "24px sans-serif"
+                                ctx.fillText(nameListView.currentIndex + " - " + nameListModel.get(nameListView.currentIndex).name, rect_.x , rect_.y - 20)
+                            }
+                        }
+
+                        if(canvas.requestClear)
+                        {
+                            canvas.requestClear = false
+                            ctx.clearRect(0, 0, canvas.width, canvas.height)
+                        }
+                    }
+
+                    MouseArea
+                    {
+                        id: area
+                        anchors.fill: parent
+                        cursorShape: !uploadButton.uploaded ? Qt.ArrowCursor : Qt.CrossCursor
+
+                        onPressed:
+                        {
+                            canvas.startX = mouseX
+                            canvas.startY = mouseY
+                            canvas.isTagging = true
+                        }
+
+                        onReleased:
+                        {
+                            if(nameListView.currentIndex != -1)
+                            {
+                                canvas.rectangleList.push({x: (canvas.startX+(mouseX-canvas.startX)/2)/canvas.width,
+                                                           y: (canvas.startY+(mouseY-canvas.startY)/2)/canvas.height,
+                                                           width: (mouseX-canvas.startX)/canvas.width,
+                                                           height: (mouseY-canvas.startY)/canvas.height,
+                                                           color: canvas.color,
+                                                           index: nameListView.currentIndex,
+                                                           class: nameListModel.get(nameListView.currentIndex).name
+                                                          })
+                            }
+
+                            canvas.isTagging = false
+                        }
+
+                        onPositionChanged:
+                        {
+                            canvas.requestPaint()
+                        }
+                    }
+                }
+            }
+
+            ArrowButton
+            {
+                id: prevImageButton
+
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.leftMargin: -width / 2
+
+                width: parent.width / 20
+                height: parent.height / 4
+
+                visible: image.imageIndex > 0 && uploadButton.uploaded
+
+                direction: "left"
+                borderColor: "steelblue"
+                interColor: "lightsteelblue"
+
+                MouseArea
+                {
+                    anchors.fill: parent
+
+                    onClicked:
+                    {
+                        image.canvasRectanglesTemp[image.imageIndex] = canvas.rectangleList
+                        image.imageIndex--
+                        canvas.rectangleList = image.canvasRectanglesTemp[image.imageIndex]
+                        image.source = "file:///" + dataTagController.imageFolderPath() + "/" + dataTagController.imagePath(image.imageIndex)
+                        canvas.requestClear = true
+                        canvas.requestPaint()
+                    }
+                }
+            }
+
+            ArrowButton
+            {
+                id: nextImageButton
+
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.rightMargin: -width / 2
+
+                width: parent.width / 20
+                height: parent.height / 4
+
+                property int imagesCount: 0
+
+                visible: image.imageIndex < imagesCount && uploadButton.uploaded
+
+                direction: "right"
+                borderColor: "steelblue"
+                interColor: "lightsteelblue"
+
+                MouseArea
+                {
+                    anchors.fill: parent
+
+                    onClicked:
+                    {
+                        image.canvasRectanglesTemp[image.imageIndex] = canvas.rectangleList
+                        image.imageIndex++
+                        canvas.rectangleList = image.canvasRectanglesTemp[image.imageIndex]
+                        image.source = "file:///" + dataTagController.imageFolderPath() + "/" + dataTagController.imagePath(image.imageIndex)
+                        canvas.requestClear = true
+                        canvas.requestPaint()
+                    }
                 }
             }
         }

@@ -34,6 +34,7 @@ ApplicationWindow
 
             DataTagPage
             {
+                id: dataTagPage
                 color: "transparent"
                 anchors.fill: parent
             }
