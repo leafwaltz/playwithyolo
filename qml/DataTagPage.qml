@@ -69,6 +69,7 @@ Rectangle
                 onClicked:
                 {
                     dataFolderDialog.visible = true
+                    dataFolderDialog.invokeID = 0
                 }
 
                 onEntered:
@@ -123,12 +124,111 @@ Rectangle
 
         Text
         {
+            id: selectSavePathText
+
+            text: qsTr("选择保存路径:")
+
+            anchors.top: selectPicturesTextInputBorder.bottom
+            anchors.left: parent.left
+            anchors.topMargin: parent.height / 35
+            anchors.leftMargin: parent.width / 20
+
+            font.family: qsTr("微软雅黑")
+            font.pixelSize: parent.width / 25
+
+            color: "#003366"
+        }
+
+        Rectangle
+        {
+            id: selectSavePathButton
+
+            width: parent.width / 15
+            height: width
+
+            anchors.left: selectSavePathText.left
+            anchors.top: selectSavePathText.bottom
+            anchors.topMargin: selectSavePathText.height * 0.5
+
+            color: "transparent"
+            radius: 5
+            border.color: "steelblue"
+
+            Text
+            {
+                text: qsTr("···")
+                color: "steelblue"
+                anchors.centerIn: parent
+            }
+
+            MouseArea
+            {
+                anchors.fill: parent
+
+                onClicked:
+                {
+                    dataFolderDialog.visible = true
+                    dataFolderDialog.invokeID = 1
+                }
+
+                onEntered:
+                {
+                    parent.color = "#EEEEEE"
+                }
+
+                onExited:
+                {
+                    parent.color = "transparent"
+                }
+            }
+        }
+
+        Rectangle
+        {
+            id: selectSavePathTextInputBorder
+
+            property string dataPath: ""
+
+            anchors.left: selectSavePathButton.right
+            anchors.top: selectSavePathButton.top
+            anchors.bottom: selectSavePathButton.bottom
+            anchors.right: parent.right
+            anchors.leftMargin: selectSavePathButton.width / 2
+            anchors.rightMargin: selectSavePathButton.width
+
+            color: "transparent"
+            border.color: "steelblue"
+            radius: 5
+
+            onDataPathChanged:
+            {
+                var path = dataPath.substring(8)
+                selectSavePathTextInput.text = path
+            }
+
+            TextInput
+            {
+                id: selectSavePathTextInput
+                anchors.fill: parent
+
+                topPadding: parent.height / 10
+                leftPadding: topPadding * 2
+                font.family: qsTr("微软雅黑")
+                font.pixelSize: parent.height / 2
+                color: "steelblue"
+
+                selectByMouse: true
+            }
+        }
+
+        Text
+        {
             id: addNamesText
 
             text: qsTr("添加数据类别名称:")
 
-            anchors.top: selectPicturesTextInputBorder.bottom
-            anchors.left: selectPicturesButton.left
+            anchors.top: selectSavePathTextInputBorder.bottom
+            anchors.left: selectSavePathButton.left
             anchors.topMargin: parent.height / 35
 
             font.family: qsTr("微软雅黑")
@@ -366,7 +466,7 @@ Rectangle
                             rightPadding: nameListDelegate.spacing
                             text: nameListDelegate.text
                             font.family: qsTr("微软雅黑")
-                            font.pixelSize: namesScrollViewBorder.height / 20
+                            font.pixelSize: namesScrollViewBorder.height / 15
                             color: nameListDelegate.enabled ? (nameListDelegate.down ? "#steelblue" : classColor) : classColor
                             elide: Text.ElideRight
                             visible: nameListDelegate.text
@@ -386,66 +486,14 @@ Rectangle
             }
         }
 
-        /*ProgressBar
-        {
-            id: uploadProgressBar
-            value: 0
-            padding: 2
-
-            anchors.left: namesScrollViewBorder.left
-            anchors.right: namesScrollViewBorder.right
-            anchors.top: namesScrollViewBorder.bottom
-            anchors.topMargin: selectPicturesText.height * 0.5
-
-            background: Rectangle
-            {
-                implicitHeight: selectPicturesText.height * 0.5
-                color: "transparent"
-                border.color: "steelblue"
-                radius: 3
-            }
-
-            contentItem: Item
-            {
-                implicitHeight: selectPicturesText.height * 0.5 - 2
-
-                Rectangle
-                {
-                    width: uploadProgressBar.visualPosition * parent.width
-                    height: parent.height
-                    radius: 2
-                    color: "lightsteelblue"
-                }
-            }
-        }
-
-        Label
-        {
-            id: uploadLabel
-
-            anchors.left: uploadProgressBar.left
-            anchors.top: uploadProgressBar.bottom
-            anchors.right: uploadProgressBar.right
-
-            height: uploadProgressBar.height * 1.2
-
-            text: ""
-            font.pixelSize: uploadProgressBar.height
-            font.family: qsTr("微软雅黑")
-
-            color: "#003366"
-        }*/
-
         Rectangle
         {
             id: uploadButton
 
-            height: parent.width / 10
+            height: parent.height / 15
             width: height * 2
 
             anchors.horizontalCenter: parent.horizontalCenter
-            //anchors.top: uploadLabel.bottom
-            //anchors.topMargin: height / 2
             anchors.bottom: parent.bottom
             anchors.bottomMargin: height
 
@@ -495,8 +543,8 @@ Rectangle
                         }
 
                         dataTagController.getImagePathes(selectPicturesTextInput.text)
+                        dataTagController.setSavePath(selectSavePathTextInput.text)
 
-                        //console.log("file:///" + dataTagController.imageFolderPath() + "/" + dataTagController.imagePath(0))
                         image.source = "file:///" + dataTagController.imageFolderPath() + "/" + dataTagController.imagePath(0)
                         image.imageIndex = 0
                         image.canvasRectanglesTemp = []
@@ -726,7 +774,7 @@ Rectangle
 
                 property int imagesCount: 0
 
-                visible: image.imageIndex < imagesCount && uploadButton.uploaded
+                visible: image.imageIndex != imagesCount - 1 && uploadButton.uploaded
 
                 direction: "right"
                 borderColor: "steelblue"
@@ -748,6 +796,123 @@ Rectangle
                 }
             }
         }
+
+        Rectangle
+        {
+            id: saveProgressBarBorder
+
+            anchors.top: imageWindow.bottom
+            anchors.bottom: saveButton.top
+            anchors.left: imageWindow.left
+            anchors.right: imageWindow.right
+            anchors.topMargin: saveButton.height / 5
+            anchors.bottomMargin: anchors.topMargin
+
+            color: "transparent"
+
+            visible: false
+
+            ProgressBar
+            {
+                id: saveProgressBar
+                value: 0
+                padding: 4
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.right: parent.right
+                anchors.rightMargin: parent.width / 2
+
+                background: Rectangle
+                {
+                    color: "transparent"
+                    border.color: "steelblue"
+                    radius: 3
+                }
+
+                contentItem: Item
+                {
+                    Rectangle
+                    {
+                        width: saveProgressBar.visualPosition * parent.width
+                        height: parent.height
+                        radius: 2
+                        color: "lightsteelblue"
+                    }
+                }
+            }
+
+            Text
+            {
+                id: saveText
+
+                anchors.left: saveProgressBar.right
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.leftMargin: parent.width / 25
+
+                color: "#003366"
+
+                text: ""
+
+                font.family: qsTr("微软雅黑")
+                font.pixelSize: parent.height * 0.6
+            }
+        }
+
+        Rectangle
+        {
+            id: saveButton
+
+            height: parent.height / 15
+            width: height * 2
+
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: height
+
+            color: "transparent"
+            radius: 5
+            border.color: "steelblue"
+
+            Text
+            {
+                text: qsTr("保 存")
+                color: "#003366"
+                font.family: qsTr("微软雅黑")
+                font.pixelSize: parent.width / 5
+                anchors.centerIn: parent
+            }
+
+            MouseArea
+            {
+                anchors.fill: parent
+
+                onClicked:
+                {
+                    for(var i = 0;i<canvasRectanglesTemp.length;i++)
+                    {
+                        for(var j = 0;j<canvasRectanglesTemp[i].length;j++)
+                        {
+
+                        }
+                    }
+
+                    dataTagController.save()
+                }
+
+                onEntered:
+                {
+                    parent.color = "#EEEEEE"
+                }
+
+                onExited:
+                {
+                    parent.color = "transparent"
+                }
+            }
+        }
     }
 
     FileDialog
@@ -759,11 +924,23 @@ Rectangle
         selectMultiple: false
         visible: false
 
+        property int invokeID: -1
+
         onAccepted:
         {
-            //console.log("You chose: " + fileDialog.fileUrls)
             visible = false
-            selectPicturesTextInputBorder.dataPath = dataFolderDialog.fileUrls[0]
+            switch(invokeID)
+            {
+            case 0:
+                selectPicturesTextInputBorder.dataPath = dataFolderDialog.fileUrls[0]
+                break
+            case 1:
+                selectSavePathTextInputBorder.dataPath = dataFolderDialog.fileUrls[0]
+                break
+            default:
+                break
+            }
+            invokeID = -1
         }
 
         onRejected:
