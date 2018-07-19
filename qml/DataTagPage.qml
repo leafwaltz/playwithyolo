@@ -2,9 +2,68 @@
 import QtQuick.Dialogs 1.2
 import QtQuick.Controls 2.2
 import QtQuick.Controls.Styles 1.4
+import Tagging 1.0
 
 Rectangle
 {
+    id: page
+
+    DataTagController
+    {
+        id: dataTagController
+
+        property var taggingImageList: new Array()
+
+        onError:
+        {
+            messageDialog.text = qsTr(message)
+            messageDialog.visible = true
+        }
+
+        onProgress:
+        {
+            saveProgressBar.value = progressVal
+        }
+
+        onSaveImageFilesBegin:
+        {
+            saveProgressBarBorder.visible = true
+        }
+
+        onSaveImageFilesEnd:
+        {
+            saveProgressBarBorder.visible = false
+        }
+
+        onSavingFile:
+        {
+            saveText.text = qsTr(fileName)
+        }
+
+        function save()
+        {
+            makeDataFolder()
+            saveNames()
+            saveTrainFile()
+
+            if(taggingImageList.length != 0)
+            {
+                for(var i = 0;i<taggingImageList.length;i++)
+                {
+                    var imageName = imageFileName(i)
+
+                    for(var j = 0;j<taggingImageList[i].length;j++)
+                    {
+                        var rect = taggingImageList[i][j]
+                        saveTagRect(imageName, rect.classIndex, rect.className, rect.x, rect.y, rect.width, rect.height)
+                    }
+                }
+            }
+
+            saveDataFiles()
+        }
+    }
+
     Rectangle
     {
         id: baseInfomation
@@ -519,51 +578,64 @@ Rectangle
 
                 onClicked:
                 {
-                    if(uploadButton.reuploadFlag)
+                    if(selectPicturesTextInput.text === "" || selectSavePathTextInput.text === "")
                     {
-                        uploadButton.reuploadFlag = false
 
-                        deleteNameButton.enabled = true
-                        addNameButton.enabled = true
-
-                        canvas.rectangleList = []
-                        canvas.requestClear = true
-                        canvas.requestPaint()
-                        image.source = ""
-                        image.imageIndex = 0
-                        image.canvasRectanglesTemp = []
-                        uploadButton.uploaded = false
-                        nameListView.currentIndex = -1
                     }
                     else
                     {
-                        for(var i = 0;i<nameListModel.count;i++)
+                        if(uploadButton.reuploadFlag)
                         {
-                            dataTagController.addName(nameListModel.get(i).name)
+                            uploadButton.reuploadFlag = false
+
+                            deleteNameButton.enabled = true
+                            addNameButton.enabled = true
+
+                            dataTagController.taggingImageList = []
+                            canvas.requestClear = true
+                            canvas.requestPaint()
+                            image.source = ""
+                            image.imageIndex = 0
+                            uploadButton.uploaded = false
+                            nameListView.currentIndex = -1
                         }
-
-                        dataTagController.getImagePathes(selectPicturesTextInput.text)
-                        dataTagController.setSavePath(selectSavePathTextInput.text)
-
-                        image.source = "file:///" + dataTagController.imageFolderPath() + "/" + dataTagController.imagePath(0)
-                        image.imageIndex = 0
-                        image.canvasRectanglesTemp = []
-
-                        for(var j = 0;j<dataTagController.imagesCount();j++)
+                        else
                         {
-                            image.canvasRectanglesTemp.push([])
+                            for(var i = 0;i<nameListModel.count;i++)
+                            {
+                                dataTagController.addName(nameListModel.get(i).name)
+                            }
+
+                            dataTagController.getImagePathes(selectPicturesTextInput.text)
+                            dataTagController.setSavePath(selectSavePathTextInput.text)
+                            dataTagController.taggingImageList = []
+
+                            for(var j = 0;j<dataTagController.taggingImageCount();j++)
+                            {
+                                dataTagController.taggingImageList.push([])
+                            }
+
+                            if(dataTagController.taggingImageCount() !== 0)
+                            {
+                                image.source = dataTagController.imagePath(0)
+                                image.imageIndex = 0
+
+                                uploadButton.uploaded = true
+                                uploadButton.reuploadFlag = true
+
+                                deleteNameButton.enabled = false
+                                addNameButton.enabled = false
+
+                                canvas.requestClear = true
+                                canvas.requestPaint()
+
+                                nextImageButton.imagesCount = dataTagController.taggingImageCount()
+                            }
+                            else
+                            {
+
+                            }
                         }
-
-                        uploadButton.uploaded = true
-                        uploadButton.reuploadFlag = true
-
-                        deleteNameButton.enabled = false
-                        addNameButton.enabled = false
-
-                        canvas.requestClear = true
-                        canvas.requestPaint()
-
-                        nextImageButton.imagesCount = dataTagController.imagesCount()
                     }
                 }
 
@@ -624,7 +696,6 @@ Rectangle
                 asynchronous: true
 
                 property int imageIndex: 0
-                property var canvasRectanglesTemp
 
                 onProgressChanged:
                 {
@@ -644,7 +715,6 @@ Rectangle
                     property string color
                     property bool requestClear: false
                     property bool isTagging: false
-                    property var rectangleList: []
 
                     onPaint:
                     {
@@ -654,21 +724,28 @@ Rectangle
                         {
                             ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-                            for(var i = 0;i < canvas.rectangleList.length;i++)
+                            var taggingRectList = dataTagController.taggingImageList[image.imageIndex]
+
+                            for(var i = 0;i < taggingRectList.length;i++)
                             {
-                                var rect = canvas.rectangleList[i]
-                                var rectWidth = rect.width * canvas.width
-                                var rectHeight = rect.height * canvas.height
-                                var rectX = rect.x * canvas.width - rectWidth / 2
-                                var rectY = rect.y * canvas.height - rectHeight / 2
-                                ctx.strokeStyle = rect.color
-                                ctx.fillStyle = rect.color
-                                ctx.lineWidth = 5.0
-                                ctx.strokeRect(rectX, rectY, rectWidth, rectHeight)
-                                ctx.lineWidth = 1.0
-                                ctx.font = "24px sans-serif"
-                                ctx.fillText(rect.index + " - " + rect.class, rectX , rectY - 20)
+                                var rect = taggingRectList[i]
+
+                                if(rect !== null)
+                                {
+                                    var rectWidth = rect.width * canvas.width
+                                    var rectHeight = rect.height * canvas.height
+                                    var rectX = rect.x * canvas.width - rectWidth / 2
+                                    var rectY = rect.y * canvas.height - rectHeight / 2
+                                    ctx.strokeStyle = rect.color
+                                    ctx.fillStyle = rect.color
+                                    ctx.lineWidth = 5.0
+                                    ctx.strokeRect(rectX, rectY, rectWidth, rectHeight)
+                                    ctx.lineWidth = 1.0
+                                    ctx.font = "24px sans-serif"
+                                    ctx.fillText(rect.classIndex + " - " + rect.className, rectX , rectY - 20)
+                                }
                             }
+
 
                             if(canvas.isTagging && area.mouseX - startX != 0 && area.mouseY - startY != 0)
                             {
@@ -707,14 +784,15 @@ Rectangle
                         {
                             if(nameListView.currentIndex != -1)
                             {
-                                canvas.rectangleList.push({x: (canvas.startX+(mouseX-canvas.startX)/2)/canvas.width,
-                                                           y: (canvas.startY+(mouseY-canvas.startY)/2)/canvas.height,
-                                                           width: (mouseX-canvas.startX)/canvas.width,
-                                                           height: (mouseY-canvas.startY)/canvas.height,
-                                                           color: canvas.color,
-                                                           index: nameListView.currentIndex,
-                                                           class: nameListModel.get(nameListView.currentIndex).name
-                                                          })
+                                var taggingImage = dataTagController.taggingImageList[image.imageIndex]
+
+                                taggingImage.push({classIndex: nameListView.currentIndex,
+                                                   className: nameListModel.get(nameListView.currentIndex).name,
+                                                   color: canvas.color,
+                                                   x: (canvas.startX+(mouseX-canvas.startX)/2)/canvas.width,
+                                                   y: (canvas.startY+(mouseY-canvas.startY)/2)/canvas.height,
+                                                   width: (mouseX-canvas.startX)/canvas.width,
+                                                   height: (mouseY-canvas.startY)/canvas.height})
                             }
 
                             canvas.isTagging = false
@@ -751,10 +829,8 @@ Rectangle
 
                     onClicked:
                     {
-                        image.canvasRectanglesTemp[image.imageIndex] = canvas.rectangleList
                         image.imageIndex--
-                        canvas.rectangleList = image.canvasRectanglesTemp[image.imageIndex]
-                        image.source = "file:///" + dataTagController.imageFolderPath() + "/" + dataTagController.imagePath(image.imageIndex)
+                        image.source = dataTagController.imagePath(image.imageIndex)
                         canvas.requestClear = true
                         canvas.requestPaint()
                     }
@@ -786,10 +862,8 @@ Rectangle
 
                     onClicked:
                     {
-                        image.canvasRectanglesTemp[image.imageIndex] = canvas.rectangleList
                         image.imageIndex++
-                        canvas.rectangleList = image.canvasRectanglesTemp[image.imageIndex]
-                        image.source = "file:///" + dataTagController.imageFolderPath() + "/" + dataTagController.imagePath(image.imageIndex)
+                        image.source = dataTagController.imagePath(image.imageIndex)
                         canvas.requestClear = true
                         canvas.requestPaint()
                     }
@@ -802,10 +876,10 @@ Rectangle
             id: saveProgressBarBorder
 
             anchors.top: imageWindow.bottom
-            anchors.bottom: saveButton.top
+            anchors.bottom: buttons.top
             anchors.left: imageWindow.left
             anchors.right: imageWindow.right
-            anchors.topMargin: saveButton.height / 5
+            anchors.topMargin: buttons.height / 5
             anchors.bottomMargin: anchors.topMargin
 
             color: "transparent"
@@ -861,55 +935,140 @@ Rectangle
             }
         }
 
-        Rectangle
+        Row
         {
-            id: saveButton
-
+            id: buttons
+            spacing: parent.width / 10
+            leftPadding: spacing * 1.2
             height: parent.height / 15
-            width: height * 2
-
-            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.left: imageWindow.left
+            anchors.right: imageWindow.right
             anchors.bottom: parent.bottom
             anchors.bottomMargin: height
 
-            color: "transparent"
-            radius: 5
-            border.color: "steelblue"
-
-            Text
+            Rectangle
             {
-                text: qsTr("保 存")
-                color: "#003366"
-                font.family: qsTr("微软雅黑")
-                font.pixelSize: parent.width / 5
-                anchors.centerIn: parent
-            }
+                id: revokeButton
 
-            MouseArea
-            {
-                anchors.fill: parent
+                height: parent.height
+                width: height * 2
 
-                onClicked:
+                color: "transparent"
+                radius: 5
+                border.color: "steelblue"
+
+                Text
                 {
-                    for(var i = 0;i<canvasRectanglesTemp.length;i++)
-                    {
-                        for(var j = 0;j<canvasRectanglesTemp[i].length;j++)
-                        {
+                    text: qsTr("撤 销")
+                    color: "#003366"
+                    font.family: qsTr("微软雅黑")
+                    font.pixelSize: parent.width / 5
+                    anchors.centerIn: parent
+                }
 
-                        }
+                MouseArea
+                {
+                    anchors.fill: parent
+
+                    onClicked:
+                    {
+                        if(dataTagController.taggingImageList[image.imageIndex].length>0)
+                            dataTagController.taggingImageList[image.imageIndex].pop()
+                        canvas.requestPaint()
                     }
 
-                    dataTagController.save()
+                    onEntered:
+                    {
+                        parent.color = "#EEEEEE"
+                    }
+
+                    onExited:
+                    {
+                        parent.color = "transparent"
+                    }
+                }
+            }
+
+            Rectangle
+            {
+                id: clearButton
+
+                height: parent.height
+                width: height * 2
+
+                color: "transparent"
+                radius: 5
+                border.color: "steelblue"
+
+                Text
+                {
+                    text: qsTr("清 空")
+                    color: "#003366"
+                    font.family: qsTr("微软雅黑")
+                    font.pixelSize: parent.width / 5
+                    anchors.centerIn: parent
                 }
 
-                onEntered:
+                MouseArea
                 {
-                    parent.color = "#EEEEEE"
+                    anchors.fill: parent
+
+                    onClicked:
+                    {
+                        dataTagController.taggingImageList[image.imageIndex] = []
+                        canvas.requestPaint()
+                    }
+
+                    onEntered:
+                    {
+                        parent.color = "#EEEEEE"
+                    }
+
+                    onExited:
+                    {
+                        parent.color = "transparent"
+                    }
+                }
+            }
+
+            Rectangle
+            {
+                id: saveButton
+
+                height: parent.height
+                width: height * 2
+
+                color: "transparent"
+                radius: 5
+                border.color: "steelblue"
+
+                Text
+                {
+                    text: qsTr("保 存")
+                    color: "#003366"
+                    font.family: qsTr("微软雅黑")
+                    font.pixelSize: parent.width / 5
+                    anchors.centerIn: parent
                 }
 
-                onExited:
+                MouseArea
                 {
-                    parent.color = "transparent"
+                    anchors.fill: parent
+
+                    onClicked:
+                    {
+                        dataTagController.save()
+                    }
+
+                    onEntered:
+                    {
+                        parent.color = "#EEEEEE"
+                    }
+
+                    onExited:
+                    {
+                        parent.color = "transparent"
+                    }
                 }
             }
         }
@@ -947,5 +1106,20 @@ Rectangle
         {
             visible = false
         }
+    }
+
+    MessageDialog
+    {
+         id: messageDialog
+
+         title: "Error!"
+         icon: StandardIcon.Warning
+         text: ""
+         visible: false
+
+         onAccepted:
+         {
+             messageDialog.visible = false
+         }
     }
 }

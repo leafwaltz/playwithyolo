@@ -9,8 +9,9 @@ int main(int argc, char *argv[])
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QGuiApplication app(argc, argv);
 
+    qmlRegisterType<DataTagController>("Tagging", 1, 0, "DataTagController");
+
     QQmlApplicationEngine engine;
-    engine.rootContext()->setContextProperty("dataTagController", &DataTagController::globalInstance());
 
     engine.load(QUrl(QLatin1String("qrc:/main.qml")));
 

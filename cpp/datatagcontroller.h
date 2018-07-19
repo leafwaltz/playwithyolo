@@ -2,163 +2,143 @@
 #define DATATAGCONTROLLER_H
 
 #include <QObject>
-#include <QList>
 #include <QString>
 #include <QStringList>
-#include <QDir>
-#include <QQuickPaintedItem>
-#include <QVector>
-#include <QImage>
-#include <QVariantList>
-#include <QThread>
+#include <QTextStream>
 #include <QMap>
-#include <QPair>
-#include <QDebug>
+#include <QVector>
+#include <QDir>
+#include <QThread>
 
-class ImageFilesSaver : public QObject
+struct TagRect
 {
-    Q_OBJECT
+    int     classIndex;
+    QString className;
+    float   x;
+    float   y;
+    float   width;
+    float   height;
 
-public slots:
-    void saveImageFiles(QStringList imageFiles)
+    TagRect()
     {
     }
 
-signals:
-    void resultReady(const QString &result);
+    TagRect(int classIndex, QString className, float x, float y, float width, float height)
+        : classIndex(classIndex), className(className), x(x), y(y), width(width), height(height)
+    {
+    }
 };
 
-class ImageFilesSaveController :  public QObject
+class SaveDataFilesThread : public QThread
 {
     Q_OBJECT
 
+    void run() override;
+
 public:
+    SaveDataFilesThread(QObject* parent = 0)
+        : QThread(parent)
+    {
+    }
+
+    void setPathAndData(const QString& imageFolderPath, const QString& savePath, const QMap<QString, QVector<TagRect>>& data);
+
+signals:
+    void saveStart();
+    void done();
+    void saving(QString fileName);
+    void savingProgress(float process);
+    void error(QString message);
+
 private:
-    QThread saveThread;
+    QString savePath_;
+    QString imageFolderPath_;
+    QMap<QString, QVector<TagRect>> data_;
 };
 
 class DataTagController : public QObject
 {
     Q_OBJECT
 
-    struct Tags
-    {
-        int classIndex;
-        float x;
-        float y;
-        float height;
-        float width;
-
-        Tags()
-            : classIndex(-1), x(0.), y(0.), height(0.), width(0.) {}
-
-        Tags(int classIndex, float x, float y, float height, float width)
-            : classIndex(classIndex), x(x), y(y), height(height), width(width) {}
-    };
-
 public:
+    DataTagController(QObject* parent = 0)
+        : QObject(parent)
+    {
+    }
+
     ~DataTagController() {}
 
-    static DataTagController& globalInstance()
+    Q_INVOKABLE void addName(QString name);
+
+    Q_INVOKABLE void makeDataFolder();
+
+    Q_INVOKABLE void saveNames();
+
+    Q_INVOKABLE void saveTrainFile();
+
+    Q_INVOKABLE void saveTagRect(QString imageFileName, int classIndex, QString className, float x, float y, float width, float height);
+
+    Q_INVOKABLE void saveDataFiles();
+
+    Q_INVOKABLE void getImagePathes(QString folderPath);
+
+    Q_INVOKABLE void setSavePath(QString folderPath);
+
+    Q_INVOKABLE QString imageFileName(int index) const;
+
+    Q_INVOKABLE QString imagePath(int index) const;
+
+    Q_INVOKABLE QString imageFolderPath() const;
+
+    Q_INVOKABLE int taggingImageCount() const;
+
+    Q_INVOKABLE void clearTaggingImages();
+
+public slots:
+    void submitProgress(float progressVal)
     {
-        static DataTagController instance;
-        return instance;
+        emit progress(progressVal);
     }
 
-    Q_INVOKABLE void addName(QString name)
+    void submitSavingFile(const QString& fileName)
     {
-        nameList_.append(name);
+        emit savingFile(fileName);
     }
 
-    void makeDataFolder()
+    void submitSaveFileBegin()
     {
-        QDir dir;
-
-        if(!dir.exists(savePath_ + "/data"))
-        {
-            dir.mkdir(savePath_ + "/data");
-        }
-
-        if(!dir.exists(savePath_ + "/data/img"))
-        {
-            dir.mkdir(savePath_ + "/data/img");
-        }
+        emit saveImageFilesBegin();
     }
 
-    void saveNames()
+    void submitSaveFileEnd()
     {
-        QFile file(savePath_ + "/data/obj.names");
-        if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
-            qDebug() << "fuck";
-
-        QTextStream out(&file);
-        for(auto name : nameList_)
-        {
-            out << name << "\n";
-        }
+        emit saveImageFilesEnd();
     }
 
-    void saveTrainFile()
+    void submitErrorMessage(const QString& message)
     {
-        QFile file(savePath_ + "/data/train.txt");
-        if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
-            qDebug() << "fuck";
-
-        QTextStream out(&file);
-        for(auto imageFile : imageFiles_)
-        {
-            out << "data/img/" + imageFile << "\n";
-        }
+        emit error(message);
     }
 
-    Q_INVOKABLE void saveImageTags(QString fileName, int classIndex, float x, float y, float width, float height)
-    {
-        imageTags_[fileName].push_back(Tags(classIndex, x, y, width, height));
-    }
-
-    Q_INVOKABLE void save()
-    {
-        makeDataFolder();
-        saveNames();
-        saveTrainFile();
-    }
-
-    Q_INVOKABLE void getImagePathes(QString folderPath)
-    {
-        imageFolderPath_ = folderPath;
-
-        QDir dir(folderPath);
-        QStringList nameFilters;
-        nameFilters << "*.jpg" << "*.jpeg" << "*.png" << "*.JPG" << "*.JPEG" << "*.PNG";
-        imageFiles_ = dir.entryList(nameFilters, QDir::Files|QDir::Readable, QDir::Name);
-    }
-
-    Q_INVOKABLE void setSavePath(QString folderPath)
-    {
-        savePath_ = folderPath;
-    }
-
-    Q_INVOKABLE QString imagePath(int index) const
-    {
-        return imageFiles_[index];
-    }
-
-    Q_INVOKABLE QString imageFolderPath() const
-    {
-        return imageFolderPath_;
-    }
-
-    Q_INVOKABLE int imagesCount() const
-    {
-        return imageFiles_.size();
-    }
+signals:
+    void progress(float progressVal);
+    void savingFile(QString fileName);
+    void saveImageFilesBegin();
+    void saveImageFilesEnd();
+    void error(QString message);
 
 private:
+    /**
+     * @brief hold class names, for the file "obj.names"
+     */
     QList<QString> nameList_;
+
     QString imageFolderPath_;
     QString savePath_;
-    QStringList imageFiles_;
-    QMap<QString, QVector<Tags>> imageTags_;
+
+    QStringList imageFileNames_;
+
+    QMap<QString, QVector<TagRect>> tagRects_;
 };
 
 #endif // DATATAGCONTROLLER_H
