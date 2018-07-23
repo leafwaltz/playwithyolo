@@ -61,6 +61,11 @@ void DataTagController::makeDataFolder()
         dir.mkdir(savePath_ + "/data");
     }
 
+    if(!dir.exists(savePath_ + "/backup"))
+    {
+        dir.mkdir(savePath_ + "/backup");
+    }
+
     if(!dir.exists(savePath_ + "/data/img"))
     {
         dir.mkdir(savePath_ + "/data/img");
@@ -80,17 +85,43 @@ void DataTagController::saveNames()
     }
 }
 
-void DataTagController::saveTrainFile()
+void DataTagController::saveTrainAndValidFile()
 {
-    QFile file(savePath_ + "/data/train.txt");
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
+    QFile trainFile(savePath_ + "/data/train.txt");
+    if (!trainFile.open(QIODevice::WriteOnly | QIODevice::Text))
         emit error("写入训练配置文件 train.txt 失败!");
 
-    QTextStream out(&file);
-    for(auto imageFileName : imageFileNames_)
+    QFile validFile(savePath_ + "/data/valid.txt");
+    if (!validFile.open(QIODevice::WriteOnly | QIODevice::Text))
+        emit error("写入训练配置文件 valid.txt 失败!");
+
+    QTextStream trainOut(&trainFile);
+    QTextStream validOut(&validFile);
+
+    if(validateFileIndices_.isEmpty())
+        emit error("生成验证集失败!检查是否设置了验证集比例,或者等待一段时间再试。");
+
+    for(int i = 0;i<imageFileNames_.size();i++)
     {
-        out << "data/img/" + imageFileName << "\n";
+        if(validateFileIndices_.contains(i))
+            validOut << "data/img/" + imageFileNames_[i] << "\n";
+        else
+            trainOut << "data/img/" + imageFileNames_[i] << "\n";
     }
+}
+
+void DataTagController::savePathesConfig()
+{
+    QFile file(savePath_ + "/data/obj.data");
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
+        emit error("写入路径配置文件 obj.data 失败!");
+
+    QTextStream out(&file);
+    out << "classes=" << nameList_.size() << "\n";
+    out << "train=data/train.txt" << "\n";
+    out << "valid=data/valid.txt" << "\n";
+    out << "names=data/obj.names" << "\n";
+    out << "backup=backup/" << "\n";
 }
 
 void DataTagController::saveTagRect(QString imageFileName, int classIndex, QString className, float x, float y, float width, float height)
@@ -124,6 +155,12 @@ void DataTagController::getImagePathes(QString folderPath)
     {
         tagRects_[name] = QVector<TagRect>();
     }
+
+    CreateRandomSequenceThread* createRandomSequenceThread = new CreateRandomSequenceThread(this);
+    createRandomSequenceThread->setRangeAndSize(0, imageFileNames_.size(), imageFileNames_.size()*validatePercent_);
+    connect(createRandomSequenceThread, &CreateRandomSequenceThread::finished, createRandomSequenceThread, &QObject::deleteLater);
+    connect(createRandomSequenceThread, &CreateRandomSequenceThread::resultReady, this, &DataTagController::setValidateFileIndices);
+    createRandomSequenceThread->start();
 }
 
 void DataTagController::setSavePath(QString folderPath)
@@ -156,3 +193,7 @@ void DataTagController::clearTaggingImages()
     imageFileNames_.clear();
 }
 
+void DataTagController::setValidatePercent(float validatePercent)
+{
+    validatePercent_ = validatePercent;
+}

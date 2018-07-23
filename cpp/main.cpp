@@ -4,6 +4,8 @@
 
 #include "datatagcontroller.h"
 
+#include <stdio.h>
+
 int main(int argc, char *argv[])
 {
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);

@@ -44,7 +44,8 @@ Rectangle
         {
             makeDataFolder()
             saveNames()
-            saveTrainFile()
+            saveTrainAndValidFile()
+            savePathesConfig()
 
             if(taggingImageList.length != 0)
             {
@@ -112,12 +113,12 @@ Rectangle
 
             color: "transparent"
             radius: 5
-            border.color: "steelblue"
+            border.color: enabled ? "steelblue" : "lightsteelblue"
 
             Text
             {
                 text: qsTr("···")
-                color: "steelblue"
+                color: enabled ? "steelblue" : "lightsteelblue"
                 anchors.centerIn: parent
             }
 
@@ -157,7 +158,7 @@ Rectangle
             anchors.rightMargin: selectPicturesButton.width
 
             color: "transparent"
-            border.color: "steelblue"
+            border.color: enabled ? "steelblue" : "lightsteelblue"
             radius: 5
 
             onDataPathChanged:
@@ -175,7 +176,7 @@ Rectangle
                 leftPadding: topPadding * 2
                 font.family: qsTr("微软雅黑")
                 font.pixelSize: parent.height / 2
-                color: "steelblue"
+                color: enabled ? "steelblue" : "lightsteelblue"
 
                 selectByMouse: true
             }
@@ -211,12 +212,12 @@ Rectangle
 
             color: "transparent"
             radius: 5
-            border.color: "steelblue"
+            border.color: enabled ? "steelblue" : "lightsteelblue"
 
             Text
             {
                 text: qsTr("···")
-                color: "steelblue"
+                color: enabled ? "steelblue" : "lightsteelblue"
                 anchors.centerIn: parent
             }
 
@@ -256,7 +257,7 @@ Rectangle
             anchors.rightMargin: selectSavePathButton.width
 
             color: "transparent"
-            border.color: "steelblue"
+            border.color: enabled ? "steelblue" : "lightsteelblue"
             radius: 5
 
             onDataPathChanged:
@@ -274,9 +275,123 @@ Rectangle
                 leftPadding: topPadding * 2
                 font.family: qsTr("微软雅黑")
                 font.pixelSize: parent.height / 2
-                color: "steelblue"
+                color: enabled ? "steelblue" : "lightsteelblue"
 
                 selectByMouse: true
+            }
+        }
+
+        Text
+        {
+            id: validatePercentText
+
+            text: qsTr("选择生成训练集比例:")
+
+            anchors.top: selectSavePathTextInputBorder.bottom
+            anchors.left: selectSavePathButton.left
+            anchors.topMargin: parent.height / 35
+
+            font.family: qsTr("微软雅黑")
+            font.pixelSize: parent.width / 25
+
+            color: "#003366"
+        }
+
+        Rectangle
+        {
+            id: validatePercentBorder
+
+            height: width / 15
+
+            anchors.left: validatePercentText.left
+            anchors.right: selectSavePathTextInputBorder.right
+            anchors.top: validatePercentText.bottom
+            anchors.topMargin: validatePercentText.height * 0.5
+
+            color: "transparent"
+
+            Rectangle
+            {
+                id: validatePercentTextInputBorder
+
+                property string validatePercent: ""
+
+                anchors.left: parent.left
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+
+                width: height * 1.8
+
+                color: "transparent"
+                border.color: enabled ? "steelblue" : "lightsteelblue"
+                radius: 5
+
+                TextInput
+                {
+                    id: validatePercentTextInput
+                    anchors.fill: parent
+
+                    text: "0.0"
+
+                    topPadding: parent.height / 10
+                    leftPadding: topPadding * 2.5
+                    font.family: qsTr("微软雅黑")
+                    font.pixelSize: parent.height * 0.6
+                    color: enabled ? "steelblue" : "lightsteelblue"
+
+                    readOnly: true
+                }
+            }
+
+            Slider
+            {
+                id: validatePercentSlider
+
+                anchors.left: validatePercentTextInputBorder.right
+                anchors.leftMargin: validatePercentTextInputBorder.width * 0.5
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+
+                from: 0.0
+                value: 0.0
+                to: 1.0
+
+                onMoved:
+                {
+                    validatePercentTextInput.text = value.toFixed(2).toString()
+                    dataTagController.setValidatePercent(value)
+                }
+
+                background: Rectangle
+                {
+                    x: validatePercentSlider.leftPadding
+                    y: validatePercentSlider.topPadding + validatePercentSlider.availableHeight / 2 - height / 2
+                    implicitWidth: validatePercentBorder.width * 0.8
+                    implicitHeight: 4
+                    width: validatePercentSlider.availableWidth
+                    height: implicitHeight
+                    radius: 2
+                    color: enabled ? "lightsteelblue" : "lightgray"
+
+                    Rectangle
+                    {
+                        width: validatePercentSlider.visualPosition * parent.width
+                        height: parent.height
+                        color: enabled ? "steelblue" : "lightsteelblue"
+                        radius: 2
+                    }
+                }
+
+                handle: Rectangle
+                {
+                    x: validatePercentSlider.leftPadding + validatePercentSlider.visualPosition * (validatePercentSlider.availableWidth - width)
+                    y: validatePercentSlider.topPadding + validatePercentSlider.availableHeight / 2 - height / 2
+                    implicitWidth: 26
+                    implicitHeight: 26
+                    radius: 13
+                    color: validatePercentSlider.pressed ? "#f0f0f0" : "#f6f6f6"
+                    border.color: "#bdbebf"
+                }
             }
         }
 
@@ -286,8 +401,8 @@ Rectangle
 
             text: qsTr("添加数据类别名称:")
 
-            anchors.top: selectSavePathTextInputBorder.bottom
-            anchors.left: selectSavePathButton.left
+            anchors.top: validatePercentBorder.bottom
+            anchors.left: validatePercentBorder.left
             anchors.topMargin: parent.height / 35
 
             font.family: qsTr("微软雅黑")
@@ -398,7 +513,10 @@ Rectangle
                         flag = 0
 
                     if(flag)
+                    {
                         nameListModel.append({"name": addNameTextInput.text, "classColor": getColor()})
+                        addNameTextInput.text = ""
+                    }
                 }
 
                 onEntered:
@@ -424,7 +542,7 @@ Rectangle
             anchors.leftMargin: addNameButton.height / 2
 
             color: "transparent"
-            border.color: "steelblue"
+            border.color: enabled ? "steelblue" : "lightsteelblue"
             radius: 5
 
             TextInput
@@ -525,7 +643,7 @@ Rectangle
                             rightPadding: nameListDelegate.spacing
                             text: nameListDelegate.text
                             font.family: qsTr("微软雅黑")
-                            font.pixelSize: namesScrollViewBorder.height / 15
+                            font.pixelSize: namesScrollViewBorder.height / 10
                             color: nameListDelegate.enabled ? (nameListDelegate.down ? "#steelblue" : classColor) : classColor
                             elide: Text.ElideRight
                             visible: nameListDelegate.text
@@ -588,8 +706,18 @@ Rectangle
                         {
                             uploadButton.reuploadFlag = false
 
+                            selectPicturesTextInputBorder.enabled = true
+                            selectPicturesButton.enabled = true
+
+                            selectSavePathTextInputBorder.enabled = true
+                            selectSavePathButton.enabled = true
+
                             deleteNameButton.enabled = true
                             addNameButton.enabled = true
+                            addNameTextInputBorder.enabled = true
+
+                            validatePercentTextInputBorder.enabled = true
+                            validatePercentSlider.enabled = true
 
                             dataTagController.taggingImageList = []
                             canvas.requestClear = true
@@ -623,8 +751,18 @@ Rectangle
                                 uploadButton.uploaded = true
                                 uploadButton.reuploadFlag = true
 
+                                selectPicturesTextInputBorder.enabled = false
+                                selectPicturesButton.enabled = false
+
+                                selectSavePathTextInputBorder.enabled = false
+                                selectSavePathButton.enabled = false
+
                                 deleteNameButton.enabled = false
                                 addNameButton.enabled = false
+                                addNameTextInputBorder.enabled = false
+
+                                validatePercentTextInputBorder.enabled = false
+                                validatePercentSlider.enabled = false
 
                                 canvas.requestClear = true
                                 canvas.requestPaint()

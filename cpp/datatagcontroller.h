@@ -10,6 +10,8 @@
 #include <QDir>
 #include <QThread>
 
+#include "utils.h"
+
 struct TagRect
 {
     int     classIndex;
@@ -74,7 +76,9 @@ public:
 
     Q_INVOKABLE void saveNames();
 
-    Q_INVOKABLE void saveTrainFile();
+    Q_INVOKABLE void saveTrainAndValidFile();
+
+    Q_INVOKABLE void savePathesConfig();
 
     Q_INVOKABLE void saveTagRect(QString imageFileName, int classIndex, QString className, float x, float y, float width, float height);
 
@@ -93,6 +97,8 @@ public:
     Q_INVOKABLE int taggingImageCount() const;
 
     Q_INVOKABLE void clearTaggingImages();
+
+    Q_INVOKABLE void setValidatePercent(float validatePercent);
 
 public slots:
     void submitProgress(float progressVal)
@@ -120,6 +126,11 @@ public slots:
         emit error(message);
     }
 
+    void setValidateFileIndices(QList<int> indices)
+    {
+        validateFileIndices_ = indices;
+    }
+
 signals:
     void progress(float progressVal);
     void savingFile(QString fileName);
@@ -139,6 +150,9 @@ private:
     QStringList imageFileNames_;
 
     QMap<QString, QVector<TagRect>> tagRects_;
+
+    float validatePercent_;
+    QList<int> validateFileIndices_;
 };
 
 #endif // DATATAGCONTROLLER_H
