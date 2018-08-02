@@ -72,6 +72,8 @@ public:
 
     Q_INVOKABLE void addName(QString name);
 
+    Q_INVOKABLE void clearNameList();
+
     Q_INVOKABLE void makeDataFolder();
 
     Q_INVOKABLE void saveNames();
@@ -99,6 +101,10 @@ public:
     Q_INVOKABLE void clearTaggingImages();
 
     Q_INVOKABLE void setValidatePercent(float validatePercent);
+
+    Q_INVOKABLE void clearTagRects();
+
+    Q_INVOKABLE void clearValidateFileIndices();
 
 public slots:
     void submitProgress(float progressVal)

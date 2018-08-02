@@ -13,7 +13,7 @@ void SaveDataFilesThread::run()
 
         QFile tagFile(savePath_ + it.key().split(".")[0] + ".txt");
         if (!tagFile.open(QIODevice::WriteOnly | QIODevice::Text))
-            emit error("写入标注文件" + it.key().split(".")[0] + ".txt" + "失败!");
+            emit error(QString::fromLocal8Bit("写入标注文件") + it.key().split(".")[0] + QString::fromLocal8Bit(".txt") + QString::fromLocal8Bit("失败!"));
 
         emit saving("Saving...   " + it.key().split(".")[0] + ".txt");
 
@@ -26,7 +26,7 @@ void SaveDataFilesThread::run()
 
         QFile imageFile(imageFolderPath_ + it.key());
         if (!imageFile.open(QIODevice::ReadOnly))
-            emit error("拷贝图像文件" + it.key() + "失败!");
+            emit error(QString::fromLocal8Bit("拷贝图像文件") + it.key() + QString::fromLocal8Bit("失败!"));
 
         imageFile.copy(savePath_ + it.key());
 
@@ -50,6 +50,11 @@ void SaveDataFilesThread::setPathAndData(const QString &imageFolderPath, const Q
 void DataTagController::addName(QString name)
 {
     nameList_.append(name);
+}
+
+void DataTagController::clearNameList()
+{
+    nameList_.clear();
 }
 
 void DataTagController::makeDataFolder()
@@ -76,7 +81,7 @@ void DataTagController::saveNames()
 {
     QFile file(savePath_ + "/data/obj.names");
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
-        emit error("写入分类配置文件 obj.names 失败!");
+        emit error(QString::fromLocal8Bit("写入分类配置文件 obj.names 失败!"));
 
     QTextStream out(&file);
     for(auto name : nameList_)
@@ -89,17 +94,17 @@ void DataTagController::saveTrainAndValidFile()
 {
     QFile trainFile(savePath_ + "/data/train.txt");
     if (!trainFile.open(QIODevice::WriteOnly | QIODevice::Text))
-        emit error("写入训练配置文件 train.txt 失败!");
+        emit error(QString::fromLocal8Bit("写入训练配置文件 train.txt 失败!"));
 
     QFile validFile(savePath_ + "/data/valid.txt");
     if (!validFile.open(QIODevice::WriteOnly | QIODevice::Text))
-        emit error("写入训练配置文件 valid.txt 失败!");
+        emit error(QString::fromLocal8Bit("写入训练配置文件 valid.txt 失败!"));
 
     QTextStream trainOut(&trainFile);
     QTextStream validOut(&validFile);
 
     if(validateFileIndices_.isEmpty())
-        emit error("生成验证集失败!检查是否设置了验证集比例,或者等待一段时间再试。");
+        emit error(QString::fromLocal8Bit("生成验证集失败!检查是否设置了验证集比例,或者等待一段时间再试。"));
 
     for(int i = 0;i<imageFileNames_.size();i++)
     {
@@ -114,7 +119,7 @@ void DataTagController::savePathesConfig()
 {
     QFile file(savePath_ + "/data/obj.data");
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
-        emit error("写入路径配置文件 obj.data 失败!");
+        emit error(QString::fromLocal8Bit("写入路径配置文件 obj.data 失败!"));
 
     QTextStream out(&file);
     out << "classes=" << nameList_.size() << "\n";
@@ -196,4 +201,14 @@ void DataTagController::clearTaggingImages()
 void DataTagController::setValidatePercent(float validatePercent)
 {
     validatePercent_ = validatePercent;
+}
+
+void DataTagController::clearTagRects()
+{
+    tagRects_.clear();
+}
+
+void DataTagController::clearValidateFileIndices()
+{
+    validateFileIndices_.clear();
 }

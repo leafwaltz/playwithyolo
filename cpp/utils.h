@@ -3,10 +3,9 @@
 
 #include <ctime>
 #include <list>
+
 #include <QList>
 #include <QThread>
-
-#include <QDebug>
 
 class CreateRandomSequenceThread : public QThread
 {

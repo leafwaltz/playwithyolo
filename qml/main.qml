@@ -48,6 +48,13 @@ ApplicationWindow
         Tab
         {
             title: qsTr("模型测试")
+
+            ModelTestPage
+            {
+                id: modelTestPage
+                color: "transparent"
+                anchors.fill: parent
+            }
         }
 
         style: TabViewStyle

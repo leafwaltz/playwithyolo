@@ -285,7 +285,7 @@ Rectangle
         {
             id: validatePercentText
 
-            text: qsTr("选择生成训练集比例:")
+            text: qsTr("选择生成验证集比例:")
 
             anchors.top: selectSavePathTextInputBorder.bottom
             anchors.left: selectSavePathButton.left
@@ -718,6 +718,9 @@ Rectangle
 
                             validatePercentTextInputBorder.enabled = true
                             validatePercentSlider.enabled = true
+                            validatePercentSlider.value = 0
+                            validatePercentTextInput.text = 0.0
+                            dataTagController.setValidatePercent(0)
 
                             dataTagController.taggingImageList = []
                             canvas.requestClear = true
@@ -726,6 +729,12 @@ Rectangle
                             image.imageIndex = 0
                             uploadButton.uploaded = false
                             nameListView.currentIndex = -1
+
+                            dataTagController.clearNameList()
+                            dataTagController.clearTagRects()
+                            dataTagController.clearValidateFileIndices()
+                            dataTagController.clearTaggingImages()
+                            nameListModel.clear()
                         }
                         else
                         {
@@ -767,7 +776,7 @@ Rectangle
                                 canvas.requestClear = true
                                 canvas.requestPaint()
 
-                                nextImageButton.imagesCount = dataTagController.taggingImageCount()
+                                nextImageButton.imageCount = dataTagController.taggingImageCount()
                             }
                             else
                             {
@@ -986,9 +995,9 @@ Rectangle
                 width: parent.width / 20
                 height: parent.height / 4
 
-                property int imagesCount: 0
+                property int imageCount: 0
 
-                visible: image.imageIndex != imagesCount - 1 && uploadButton.uploaded
+                visible: image.imageIndex != imageCount - 1 && uploadButton.uploaded
 
                 direction: "right"
                 borderColor: "steelblue"
@@ -1215,7 +1224,7 @@ Rectangle
     FileDialog
     {
         id: dataFolderDialog
-        title: qsTr("选择数据文件夹")
+        title: qsTr("选择文件夹")
         folder: shortcuts.home
         selectFolder: true
         selectMultiple: false
